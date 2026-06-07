@@ -49,7 +49,13 @@ html,body{min-height:100%;background:#060D1B;color:#E8F0F8;font-family:'Outfit',
 .note{font-size:10px;color:#2A5090;font-style:italic;margin-top:8px}
 .tag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:9px;text-transform:uppercase;letter-spacing:.4px}
 .footer{margin-top:16px;padding-top:12px;border-top:1px solid #0C1A28;display:flex;justify-content:space-between;font-size:9px;color:#1A3A5C;flex-wrap:wrap;gap:4px}
-.toast{position:fixed;bottom:20px;right:20px;background:#0D1B2E;border:1px solid #1E3A5F;border-radius:10px;padding:10px 16px;font-size:12px;display:none;z-index:999;transition:opacity .3s}
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:12px;font-weight:500;
+  background:#0D1B2E;border:1px solid #1E3A5F;display:none;z-index:9999;
+  transition:opacity .4s;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+/* Spin animation for refresh button */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{display:inline-block;animation:spin .8s linear infinite}
 @media(max-width:900px){.g5,.g4{grid-template-columns:repeat(2,1fr)}.aud-grid-3,.charts-3,.charts-2{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.g5,.g4,.aud-grid,.aud-grid-3,.charts-3,.charts-2{grid-template-columns:1fr}}
 </style>
@@ -68,15 +74,15 @@ html,body{min-height:100%;background:#060D1B;color:#E8F0F8;font-family:'Outfit',
   </div>
   <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
     <div style="text-align:right">
-      <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end">
-        <span id="sDot" style="width:7px;height:7px;border-radius:50%;background:#3B82F6;display:inline-block;transition:background .3s"></span>
+      <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+        <span id="sDot" style="width:8px;height:8px;border-radius:50%;background:#F0A500;display:inline-block;transition:background .4s"></span>
         <span id="sTxt" style="font-size:11px;color:#94A3B8">Loading…</span>
       </div>
-      <div id="rTxt" style="font-size:10px;color:#1E3A60;margin-top:1px"></div>
+      <div id="rTxt" style="font-size:10px;color:#1E3A60;margin-top:2px;text-align:right"></div>
     </div>
     <button onclick="doRefresh()" id="rBtn"
-      style="background:#1B5FCC;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s;letter-spacing:.2px">
-      ↻ Refresh
+      style="background:#1B5FCC;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s;display:flex;align-items:center;gap:7px">
+      <span id="rIcon">↻</span> Refresh
     </button>
   </div>
 </div>
@@ -98,7 +104,10 @@ html,body{min-height:100%;background:#060D1B;color:#E8F0F8;font-family:'Outfit',
   <div class="kpi-grid g5" id="ov-kpis"></div>
   <div style="margin-bottom:16px"><div class="secttl">Audience Performance</div><div class="aud-grid aud-grid-3" id="ov-aud"></div></div>
   <div class="card" style="margin-bottom:16px;overflow:hidden">
-    <div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase;letter-spacing:.4px">Platform Breakdown</span><span style="font-size:10px;color:#1E4A7A" id="ov-date"></span></div>
+    <div class="card-hd">
+      <span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase;letter-spacing:.4px">Platform Breakdown</span>
+      <span style="font-size:10px;color:#1E4A7A">7 channels · June 2026</span>
+    </div>
     <table class="tbl" id="ov-tbl"></table>
   </div>
   <div class="charts-3">
@@ -127,21 +136,20 @@ html,body{min-height:100%;background:#060D1B;color:#E8F0F8;font-family:'Outfit',
 
 <div id="pane-para" class="pane"><div class="kpi-grid g4" id="para-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div id="para-aud"></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="para-tbl"></table></div></div>
 
-<!-- TOAST -->
-<div id="toast" class="toast"></div>
+<div id="toast"></div>
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const SHEET_ID = "16lPgPvsV-kxiEFdYd8Ezz9rgbZC4ULaOkiXIhwnPps0";
 
-// Map GViz column-0 abbreviation → internal media name
+// Abbreviation in column 0 of SUM sheet → internal media name
 const C0MAP = {
-  'FB':'Meta','X':'X','TIK':'TikTok',
-  'OA Video':'OA Video','YouTube':'YouTube','YouTube ':'YouTube',
-  'Fox':'Fox CTV','Paramount':'Paramount CTV','Paramount ':'Paramount CTV'
+  'FB':'Meta', 'X':'X', 'TIK':'TikTok',
+  'OA Video':'OA Video', 'YouTube':'YouTube', 'YouTube ':'YouTube',
+  'Fox':'Fox CTV', 'Paramount':'Paramount CTV', 'Paramount ':'Paramount CTV'
 };
 
-// ─── STATIC AUDIENCE / DAILY DATA (enriched per-platform, stays fixed) ────────
+// ─── STATIC DATA (audience + daily breakdowns don't change between refreshes) ─
 const AUD = {
   Meta:[{aud:"Conservative",imp:155790,views:112354,cost:7124.94},{aud:"Evangelical",imp:197711,views:131779,cost:7096.60}],
   X:[{aud:"Conservative",imp:335338,views:60667,cost:17937,est:true},{aud:"Evangelical",imp:368920,views:77320,cost:12812,est:true}],
@@ -162,198 +170,182 @@ const DAILY = {
 };
 const PLATS=[{id:"meta",name:"Meta"},{id:"x",name:"X"},{id:"tik",name:"TikTok"},{id:"oa",name:"OA Video"},{id:"yt",name:"YouTube"},{id:"fox",name:"Fox CTV"},{id:"para",name:"Paramount CTV"}];
 
-// ─── LIVE DATA (populated by fetchSheetData) ──────────────────────────────────
+// ─── LIVE TOTALS (updated on each refresh) ────────────────────────────────────
 let LIVE = [];
 
-// ─── FETCH FROM GOOGLE SHEETS ─────────────────────────────────────────────────
-async function fetchSheetData() {
-  // Google Visualization API — works for any sheet shared with "Anyone with the link"
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=SUM&headers=1`;
-  const resp = await fetch(url, { cache: "no-store" });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const text = await resp.text();
+// ─── FETCH VIA JSONP (bypasses CORS — works from any static host) ─────────────
+function gvizJSONP(sheetId, sheetName, headers=1) {
+  return new Promise((resolve, reject) => {
+    const cb = '__gviz_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
 
-  // Strip the JSONP wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
-  const match = text.match(/setResponse\(([\s\S]+)\)/);
-  if (!match) throw new Error("Unexpected response format");
-  const json = JSON.parse(match[1]);
-  if (json.status !== "ok") throw new Error("Sheet error: " + (json.errors?.[0]?.message || json.status));
-
-  const result = [];
-  for (const row of json.table.rows) {
-    if (!row.c || !row.c[0]) continue;
-    const abbr = String(row.c[0].v ?? "").trim();
-    const name = C0MAP[abbr];
-    if (!name) continue;
-
-    // Helper: prefer numeric .v, fall back to parsing formatted .f string
-    const pN = c => {
-      if (!c) return 0;
-      if (typeof c.v === "number") return c.v;
-      const s = String(c.f ?? c.v ?? "").replace(/[^0-9.]/g, "");
-      return parseFloat(s) || 0;
+    const cleanup = () => {
+      done = true;
+      delete window[cb];
+      if (script.parentNode) script.parentNode.removeChild(script);
     };
 
+    window[cb] = (data) => {
+      cleanup();
+      if (data.status === 'ok') resolve(data.table);
+      else reject(new Error('Google Sheets: ' + (data.errors?.[0]?.message || data.status)));
+    };
+
+    script.onerror = () => { cleanup(); reject(new Error('Network error — check sheet sharing settings')); };
+    setTimeout(() => { if (!done) { cleanup(); reject(new Error('Timeout after 10s')); } }, 10000);
+
+    script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`
+      + `?sheet=${encodeURIComponent(sheetName)}&headers=${headers}&tq=&callback=${cb}`;
+    document.head.appendChild(script);
+  });
+}
+
+async function fetchSheetData() {
+  const table = await gvizJSONP(SHEET_ID, 'SUM', 1);
+
+  // Helper: extract numeric value from a GViz cell
+  const pNum = c => {
+    if (!c) return 0;
+    if (typeof c.v === 'number') return c.v;
+    // Fall back to parsing formatted string (strips ₪, commas, spaces)
+    return parseFloat(String(c.f ?? c.v ?? '').replace(/[^0-9.]/g, '')) || 0;
+  };
+
+  const result = [];
+  for (const row of table.rows) {
+    if (!row.c?.[0]) continue;
+    const abbr = String(row.c[0].v ?? '').trim();
+    const name = C0MAP[abbr];
+    if (!name) continue;                   // skip header / unknown rows
     result.push({
       media: name,
-      imp:   pN(row.c[2]),
-      views: pN(row.c[3]),
-      cost:  pN(row.c[4]),
-      cpv:   pN(row.c[5])
+      imp:   pNum(row.c[2]),
+      views: pNum(row.c[3]),
+      cost:  pNum(row.c[4]),
+      cpv:   pNum(row.c[5])
     });
   }
-  if (result.length === 0) throw new Error("No data rows found in SUM sheet");
+
+  if (result.length === 0) throw new Error('No data rows found — verify sheet name is "SUM"');
   return result;
 }
 
-// ─── STATUS / TOAST ───────────────────────────────────────────────────────────
-const STATUS = {
-  live:    ["#22C55E", "Live — Google Sheets"],
-  error:   ["#EF4444", "Error — see console"],
-  loading: ["#F0A500", "Fetching…"],
-  cached:  ["#3B82F6", "Cached data"]
-};
-function setSt(s) {
-  const [c, l] = STATUS[s] || STATUS.cached;
-  document.getElementById("sDot").style.background = c;
-  document.getElementById("sTxt").textContent = l;
+// Derive totals from static AUD data (fallback when sheet unreachable)
+function seedFromAUD() {
+  return Object.entries(AUD).map(([name, rows]) => {
+    const imp=rows.reduce((s,r)=>s+r.imp,0), views=rows.reduce((s,r)=>s+r.views,0), cost=rows.reduce((s,r)=>s+r.cost,0);
+    return {media:name, imp, views, cost, cpv:views>0?cost/views:0};
+  });
 }
-function toast(msg, ok=true) {
-  const el = document.getElementById("toast");
+
+// ─── STATUS + TOAST ───────────────────────────────────────────────────────────
+function setSt(s, msg) {
+  const cfg = {
+    live:    {c:'#22C55E', t: msg || '✓ Live — Google Sheets'},
+    loading: {c:'#F0A500', t:'Fetching data…'},
+    error:   {c:'#EF4444', t: msg || 'Error — using cached data'},
+    cached:  {c:'#3B82F6', t:'Cached data'}
+  };
+  const {c,t} = cfg[s] || cfg.cached;
+  document.getElementById('sDot').style.background = c;
+  document.getElementById('sTxt').textContent = t;
+  document.getElementById('sTxt').style.color = c;
+}
+function showToast(msg, ok=true) {
+  const el = document.getElementById('toast');
   el.textContent = msg;
-  el.style.color = ok ? "#22C55E" : "#EF4444";
-  el.style.display = "block"; el.style.opacity = "1";
-  setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.style.display="none", 300); }, 3000);
+  el.style.cssText = `position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:12px;font-weight:500;background:#0D1B2E;border:1px solid ${ok?'#22C55E':'#EF4444'};color:${ok?'#22C55E':'#EF4444'};display:block;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.6)`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display='none'; }, 3500);
 }
 
 // ─── REFRESH ──────────────────────────────────────────────────────────────────
+let refreshing = false;
 async function doRefresh() {
-  const btn = document.getElementById("rBtn");
-  btn.disabled = true; btn.textContent = "Fetching…";
-  setSt("loading");
+  if (refreshing) return;
+  refreshing = true;
+  const btn = document.getElementById('rBtn');
+  const icon = document.getElementById('rIcon');
+  btn.disabled = true;
+  icon.className = 'spinning'; icon.textContent = '↻';
+  setSt('loading');
+
   try {
     LIVE = await fetchSheetData();
-    setSt("live");
-    document.getElementById("rTxt").textContent = "Updated " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
-    toast("✓ Data updated from Google Sheets");
-    // Re-render active tab
-    document.querySelector(".tab-btn.active")?.click();
-  } catch(e) {
-    setSt("error");
-    toast("⚠ " + e.message, false);
-    console.error("Sheet fetch error:", e);
-    // Keep existing LIVE data or fall back to AUD-derived totals
-    if (LIVE.length === 0) {
-      LIVE = deriveSeedFromAUD();
-      document.querySelector(".tab-btn.active")?.click();
-    }
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    setSt('live', `✓ Live · Updated ${now}`);
+    document.getElementById('rTxt').textContent = 'Last refresh: ' + now;
+    showToast('✓ Data refreshed from Google Sheets');
+    rerenderActive();
+  } catch (err) {
+    console.error('Refresh error:', err);
+    setSt('error', '⚠ ' + err.message);
+    showToast('⚠ ' + err.message, false);
+    if (LIVE.length === 0) { LIVE = seedFromAUD(); rerenderActive(); }
+  } finally {
+    btn.disabled = false;
+    icon.className = ''; icon.textContent = '↻';
+    refreshing = false;
   }
-  btn.disabled = false; btn.textContent = "↻ Refresh";
 }
 
-// Derive totals from static AUD data as last-resort fallback
-function deriveSeedFromAUD() {
-  return Object.entries(AUD).map(([name, rows]) => {
-    const imp = rows.reduce((s,r)=>s+r.imp,0), views = rows.reduce((s,r)=>s+r.views,0), cost = rows.reduce((s,r)=>s+r.cost,0);
-    return {media:name, imp, views, cost, cpv: views>0?cost/views:0};
-  });
+function rerenderActive() {
+  document.querySelector('.tab-btn.active')?.click();
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const fN  = n => n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?Math.round(n/1e3)+"K":String(Math.round(n));
-const fC  = n => "₪"+Math.round(n).toLocaleString();
-const fCpv= n => "₪"+n.toFixed(3);
-const fP  = n => n.toFixed(1)+"%";
-const sht = m => m==="Paramount CTV"?"Paramount":m==="Fox CTV"?"Fox":m;
-const MT  = "#3E6490", GR = "rgba(30,58,95,0.35)";
-const PC  = {Meta:"#1877F2",X:"#9CA3AF",TikTok:"#FF0050","OA Video":"#4285F4",YouTube:"#FF0000","Fox CTV":"#FF6B35","Paramount CTV":"#0064FF"};
-const AC  = {Conservative:"#F0A500",Evangelical:"#5B9FDE",General:"#64748B"};
+const fN  = n => n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?Math.round(n/1e3)+'K':String(Math.round(n));
+const fC  = n => '₪'+Math.round(n).toLocaleString();
+const fCpv= n => '₪'+n.toFixed(3);
+const fP  = n => n.toFixed(1)+'%';
+const sht = m => m==='Paramount CTV'?'Paramount':m==='Fox CTV'?'Fox':m;
+const MT  = '#3E6490', GR = 'rgba(30,58,95,0.35)';
+const PC  = {Meta:'#1877F2',X:'#9CA3AF',TikTok:'#FF0050','OA Video':'#4285F4',YouTube:'#FF0000','Fox CTV':'#FF6B35','Paramount CTV':'#0064FF'};
+const AC  = {Conservative:'#F0A500',Evangelical:'#5B9FDE',General:'#64748B'};
 
-function audTotals(){
-  const t={};
-  Object.values(AUD).flat().forEach(a=>{
-    if(!t[a.aud])t[a.aud]={imp:0,views:0,cost:0};
-    t[a.aud].imp+=a.imp;t[a.aud].views+=a.views;t[a.aud].cost+=a.cost;
-  });
-  return t;
-}
-function platsByAud(aud){return Object.entries(AUD).filter(([,r])=>r.some(a=>a.aud===aud)).map(([k])=>sht(k)).join(", ");}
+function audTotals(){const t={};Object.values(AUD).flat().forEach(a=>{if(!t[a.aud])t[a.aud]={imp:0,views:0,cost:0};t[a.aud].imp+=a.imp;t[a.aud].views+=a.views;t[a.aud].cost+=a.cost;});return t;}
+function platsByAud(aud){return Object.entries(AUD).filter(([,r])=>r.some(a=>a.aud===aud)).map(([k])=>sht(k)).join(', ');}
 
 // ─── CHARTS ───────────────────────────────────────────────────────────────────
 let CH={};
 function killCharts(){Object.values(CH).forEach(c=>c?.destroy());CH={};}
-function mkBar(id,labels,datasets,opts={}){
-  const el=document.getElementById(id);if(!el)return;
-  CH[id]=new Chart(el,{type:"bar",data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:opts.tt||{}},scales:{x:{ticks:{color:MT,font:{size:10},maxRotation:opts.rot||0},grid:{display:false},border:{display:false}},y:{ticks:{callback:opts.yFmt||(v=>fN(v)),color:MT,font:{size:10}},grid:{color:GR},border:{display:false}}}}});
-}
-function mkHBar(id,labels,datasets){
-  const el=document.getElementById(id);if(!el)return;
-  CH[id]=new Chart(el,{type:"bar",data:{labels,datasets},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ₪${c.raw.toFixed(3)}`}}},scales:{x:{ticks:{callback:v=>`₪${v.toFixed(2)}`,color:MT,font:{size:10}},grid:{color:GR},border:{display:false}},y:{ticks:{color:MT,font:{size:10}},grid:{display:false},border:{display:false}}}}});
-}
-function mkDonut(id,labels,data,colors,total){
-  const el=document.getElementById(id);if(!el)return;
-  CH[id]=new Chart(el,{type:"doughnut",data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+"BB"),borderColor:"#0D1B2E",borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:"70%",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fC(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});
-}
-function mkGrouped(id,labels,d1,d2){
-  const el=document.getElementById(id);if(!el)return;
-  CH[id]=new Chart(el,{type:"bar",data:{labels,datasets:[d1,d2]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fN(c.raw)}`}}},scales:{x:{ticks:{color:MT,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{callback:v=>fN(v),color:MT,font:{size:10}},grid:{color:GR},border:{display:false}}}}});
-}
+function mkBar(id,labels,datasets,opts={}){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:opts.tt||{}},scales:{x:{ticks:{color:MT,font:{size:10},maxRotation:opts.rot||0},grid:{display:false},border:{display:false}},y:{ticks:{callback:opts.yFmt||(v=>fN(v)),color:MT,font:{size:10}},grid:{color:GR},border:{display:false}}}}});}
+function mkHBar(id,labels,datasets){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ₪${c.raw.toFixed(3)}`}}},scales:{x:{ticks:{callback:v=>`₪${v.toFixed(2)}`,color:MT,font:{size:10}},grid:{color:GR},border:{display:false}},y:{ticks:{color:MT,font:{size:10}},grid:{display:false},border:{display:false}}}}});}
+function mkDonut(id,labels,data,colors,total){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'BB'),borderColor:'#0D1B2E',borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fC(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});}
+function mkGrouped(id,labels,d1,d2){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'bar',data:{labels,datasets:[d1,d2]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fN(c.raw)}`}}},scales:{x:{ticks:{color:MT,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{callback:v=>fN(v),color:MT,font:{size:10}},grid:{color:GR},border:{display:false}}}}});}
 
 // ─── HTML PIECES ──────────────────────────────────────────────────────────────
-function kpiCard(l,v,n,gold=false){return `<div class="card kpi-card"><div class="kl">${l}</div><div class="kv" style="color:${gold?"#F0A500":"#E8F0F8"}">${v}</div><div class="kn">${n}</div></div>`;}
-function audCard2(a,tI){
-  const c=AC[a.aud]||"#888",cv=a.views>0?a.cost/a.views:0,vr=a.imp>0?a.views/a.imp*100:0,sh=tI>0?a.imp/tI*100:0;
-  const est=a.est?'<span style="color:#64748B;font-size:8px"> est.</span>':'';
-  return `<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a.aud}<span style="font-size:9px;opacity:.6;margin-left:3px">${sh.toFixed(0)}% of imp</span></div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(a.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(a.views)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:${vr>80?"#22C55E":vr>50?"#F0A500":"#94A3B8"}">${fP(vr)}</div></div><div><div class="asl">CPV${est}</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">Spend${est}</div><div class="asv" style="color:#F0A500">${fC(a.cost)}</div></div></div></div>`;
-}
-function audCard1(a){
-  const c=AC[a.aud]||"#888",cv=a.views>0?a.cost/a.views:0,vr=a.imp>0?a.views/a.imp*100:0;
-  return `<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a.aud}</div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(a.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(a.views)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:${vr>80?"#22C55E":vr>50?"#F0A500":"#94A3B8"}">${fP(vr)}</div></div><div><div class="asl">CPV</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">Spend</div><div class="asv" style="color:#F0A500">${fC(a.cost)}</div></div></div><p class="note">Only ${a.aud} audience active on this platform</p></div>`;
-}
-function dailyTable(dl){
-  return `<thead><tr><th style="text-align:left">Date</th><th>Audience</th><th>Impressions</th><th>Video Views</th><th>View Rate</th><th>Spend</th><th>CPV</th></tr></thead><tbody>${dl.map(d=>{const vr=d.imp>0?d.views/d.imp*100:0,cv=d.views>0?d.cost/d.views:0,c=AC[d.aud]||"#888";return`<tr><td style="font-weight:600;color:#D0E0F0">${d.date}</td><td style="text-align:center"><span class="tag" style="background:${c}22;color:${c}">${d.aud}</span></td><td class="mono">${d.imp.toLocaleString()}</td><td class="mono">${d.views.toLocaleString()}</td><td style="color:${vr>80?"#22C55E":vr>50?"#F0A500":"#64748B"};font-weight:600">${fP(vr)}</td><td class="mono" style="color:#F0A500;font-weight:600">${fC(d.cost)}</td><td class="mono" style="color:#E8F0F8">${fCpv(cv)}</td></tr>`;}).join("")}</tbody>`;
-}
+const kpiCard=(l,v,n,gold=false)=>`<div class="card kpi-card"><div class="kl">${l}</div><div class="kv" style="color:${gold?'#F0A500':'#E8F0F8'}">${v}</div><div class="kn">${n}</div></div>`;
+const audCard2=(a,tI)=>{const c=AC[a.aud]||'#888',cv=a.views>0?a.cost/a.views:0,vr=a.imp>0?a.views/a.imp*100:0,sh=tI>0?a.imp/tI*100:0,est=a.est?'<span style="color:#64748B;font-size:8px"> est.</span>':'';return`<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a.aud}<span style="font-size:9px;opacity:.6;margin-left:3px">${sh.toFixed(0)}% of imp</span></div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(a.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(a.views)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:${vr>80?'#22C55E':vr>50?'#F0A500':'#94A3B8'}">${fP(vr)}</div></div><div><div class="asl">CPV${est}</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">Spend${est}</div><div class="asv" style="color:#F0A500">${fC(a.cost)}</div></div></div></div>`;};
+const audCard1=(a)=>{const c=AC[a.aud]||'#888',cv=a.views>0?a.cost/a.views:0,vr=a.imp>0?a.views/a.imp*100:0;return`<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a.aud}</div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(a.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(a.views)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:${vr>80?'#22C55E':vr>50?'#F0A500':'#94A3B8'}">${fP(vr)}</div></div><div><div class="asl">CPV</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">Spend</div><div class="asv" style="color:#F0A500">${fC(a.cost)}</div></div></div><p class="note">Only ${a.aud} audience active on this platform</p></div>`;};
+function dailyTable(dl){return`<thead><tr><th style="text-align:left">Date</th><th>Audience</th><th>Impressions</th><th>Video Views</th><th>View Rate</th><th>Spend</th><th>CPV</th></tr></thead><tbody>${dl.map(d=>{const vr=d.imp>0?d.views/d.imp*100:0,cv=d.views>0?d.cost/d.views:0,c=AC[d.aud]||'#888';return`<tr><td style="font-weight:600;color:#D0E0F0">${d.date}</td><td style="text-align:center"><span class="tag" style="background:${c}22;color:${c}">${d.aud}</span></td><td class="mono">${d.imp.toLocaleString()}</td><td class="mono">${d.views.toLocaleString()}</td><td style="color:${vr>80?'#22C55E':vr>50?'#F0A500':'#64748B'};font-weight:600">${fP(vr)}</td><td class="mono" style="color:#F0A500;font-weight:600">${fC(d.cost)}</td><td class="mono" style="color:#E8F0F8">${fCpv(cv)}</td></tr>`;}).join('')}</tbody>`;}
 
 // ─── RENDER OVERVIEW ──────────────────────────────────────────────────────────
 function renderOv(){
-  const data = LIVE.length ? LIVE : deriveSeedFromAUD();
+  const data=LIVE.length?LIVE:seedFromAUD();
   const T=data.reduce((a,p)=>({imp:a.imp+p.imp,views:a.views+p.views,cost:a.cost+p.cost}),{imp:0,views:0,cost:0});
   const acpv=T.views>0?T.cost/T.views:0,vr=T.imp>0?T.views/T.imp*100:0;
-
-  document.getElementById("ov-kpis").innerHTML=[kpiCard("Total Impressions",fN(T.imp),"all channels"),kpiCard("Video Views",fN(T.views),"3-second+"),kpiCard("Total Spend",fC(T.cost),"budget consumed",true),kpiCard("Avg CPV",fCpv(acpv),"cost per view"),kpiCard("View Rate",fP(vr),"imp → views")].join("");
-  document.getElementById("ov-date").textContent = "7 channels · June 2026";
-
+  document.getElementById('ov-kpis').innerHTML=[kpiCard('Total Impressions',fN(T.imp),'all channels'),kpiCard('Video Views',fN(T.views),'3-second+'),kpiCard('Total Spend',fC(T.cost),'budget consumed',true),kpiCard('Avg CPV',fCpv(acpv),'cost per view'),kpiCard('View Rate',fP(vr),'imp → views')].join('');
   const at=audTotals();
-  document.getElementById("ov-aud").innerHTML=["Conservative","Evangelical","General"].filter(a=>at[a]).map(a=>{
-    const ad=at[a],c=AC[a],cv=ad.views>0?ad.cost/ad.views:0;
-    return `<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a}</div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(ad.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(ad.views)}</div></div><div><div class="asl">Spend</div><div class="asv" style="color:#F0A500">${fC(ad.cost)}</div></div><div><div class="asl">CPV</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:#22C55E">${fP(ad.imp>0?ad.views/ad.imp*100:0)}</div></div><div><div class="asl">Platforms</div><div class="asv" style="color:#5A7B9F;font-size:10px;padding-top:2px">${platsByAud(a)}</div></div></div></div>`;
-  }).join("");
-
+  document.getElementById('ov-aud').innerHTML=['Conservative','Evangelical','General'].filter(a=>at[a]).map(a=>{const ad=at[a],c=AC[a],cv=ad.views>0?ad.cost/ad.views:0;return`<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a}</div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(ad.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(ad.views)}</div></div><div><div class="asl">Spend</div><div class="asv" style="color:#F0A500">${fC(ad.cost)}</div></div><div><div class="asl">CPV</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:#22C55E">${fP(ad.imp>0?ad.views/ad.imp*100:0)}</div></div><div><div class="asl">Platforms</div><div class="asv" style="color:#5A7B9F;font-size:10px;padding-top:2px">${platsByAud(a)}</div></div></div></div>`;}).join('');
   const mxCpv=Math.max(...data.map(p=>p.cpv));
-  document.getElementById("ov-tbl").innerHTML=`<thead><tr><th style="text-align:left">Channel</th><th>Audiences</th><th>Impressions</th><th>Video Views</th><th>View Rate</th><th>Spend</th><th>CPV</th><th>Efficiency</th></tr></thead><tbody>${data.map(p=>{const vr=p.imp>0?p.views/p.imp*100:0,eff=mxCpv>0?(mxCpv-p.cpv)/mxCpv*100:0,ec=eff>75?"#22C55E":eff>45?"#F0A500":"#EF4444",vc=vr>80?"#22C55E":vr>50?"#F0A500":"#64748B";const auds=(AUD[p.media]||[]).map(a=>`<span class="tag" style="background:${AC[a.aud]}22;color:${AC[a.aud]}">${a.aud}</span>`).join(" ");return`<tr><td><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:${PC[p.media]||"#888"};flex-shrink:0"></span><span style="font-weight:600;color:#D0E0F0">${p.media}</span></div></td><td style="text-align:center">${auds}</td><td class="mono">${p.imp.toLocaleString()}</td><td class="mono">${p.views.toLocaleString()}</td><td style="color:${vc};font-weight:600">${fP(vr)}</td><td class="mono" style="color:#F0A500;font-weight:600">${fC(p.cost)}</td><td class="mono" style="color:#E8F0F8">${fCpv(p.cpv)}</td><td><div style="display:flex;align-items:center;gap:5px;justify-content:flex-end"><div class="eff-w"><div class="eff-b" style="width:${Math.max(eff,3).toFixed(0)}%;background:${ec}"></div></div><span style="font-size:10px;color:#1E4A7A;min-width:24px;text-align:right">${Math.round(eff)}%</span></div></td></tr>`;}).join("")}</tbody>`;
-
-  mkBar("ov-imp",data.map(p=>sht(p.media)),[{data:data.map(p=>p.imp),backgroundColor:data.map(p=>(PC[p.media]||"#888")+"AA"),borderColor:data.map(p=>PC[p.media]||"#888"),borderWidth:1.5,borderRadius:5}],{rot:40,tt:{callbacks:{label:c=>` ${fN(c.raw)}`}}});
+  document.getElementById('ov-tbl').innerHTML=`<thead><tr><th style="text-align:left">Channel</th><th>Audiences</th><th>Impressions</th><th>Video Views</th><th>View Rate</th><th>Spend</th><th>CPV</th><th>Efficiency</th></tr></thead><tbody>${data.map(p=>{const vr=p.imp>0?p.views/p.imp*100:0,eff=mxCpv>0?(mxCpv-p.cpv)/mxCpv*100:0,ec=eff>75?'#22C55E':eff>45?'#F0A500':'#EF4444',vc=vr>80?'#22C55E':vr>50?'#F0A500':'#64748B';const auds=(AUD[p.media]||[]).map(a=>`<span class="tag" style="background:${AC[a.aud]}22;color:${AC[a.aud]}">${a.aud}</span>`).join(' ');return`<tr><td><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:${PC[p.media]||'#888'};flex-shrink:0"></span><span style="font-weight:600;color:#D0E0F0">${p.media}</span></div></td><td style="text-align:center">${auds}</td><td class="mono">${p.imp.toLocaleString()}</td><td class="mono">${p.views.toLocaleString()}</td><td style="color:${vc};font-weight:600">${fP(vr)}</td><td class="mono" style="color:#F0A500;font-weight:600">${fC(p.cost)}</td><td class="mono" style="color:#E8F0F8">${fCpv(p.cpv)}</td><td><div style="display:flex;align-items:center;gap:5px;justify-content:flex-end"><div class="eff-w"><div class="eff-b" style="width:${Math.max(eff,3).toFixed(0)}%;background:${ec}"></div></div><span style="font-size:10px;color:#1E4A7A;min-width:24px;text-align:right">${Math.round(eff)}%</span></div></td></tr>`;}).join('')}</tbody>`;
+  mkBar('ov-imp',data.map(p=>sht(p.media)),[{data:data.map(p=>p.imp),backgroundColor:data.map(p=>(PC[p.media]||'#888')+'AA'),borderColor:data.map(p=>PC[p.media]||'#888'),borderWidth:1.5,borderRadius:5}],{rot:40,tt:{callbacks:{label:c=>` ${fN(c.raw)}`}}});
   const s=[...data].sort((a,b)=>a.cpv-b.cpv);
-  mkHBar("ov-cpv",s.map(p=>sht(p.media)),[{data:s.map(p=>p.cpv),backgroundColor:s.map(p=>(PC[p.media]||"#888")+"AA"),borderColor:s.map(p=>PC[p.media]||"#888"),borderWidth:1.5,borderRadius:4}]);
+  mkHBar('ov-cpv',s.map(p=>sht(p.media)),[{data:s.map(p=>p.cpv),backgroundColor:s.map(p=>(PC[p.media]||'#888')+'AA'),borderColor:s.map(p=>PC[p.media]||'#888'),borderWidth:1.5,borderRadius:4}]);
   const tC=data.reduce((a,p)=>a+p.cost,0);
-  mkDonut("ov-don",data.map(p=>p.media),data.map(p=>p.cost),data.map(p=>PC[p.media]||"#888"),tC);
-  document.getElementById("ov-leg").innerHTML=data.map(p=>`<div class="li"><span class="ld" style="background:${PC[p.media]||"#888"}"></span><span style="color:#4A6FA5">${sht(p.media)}</span><span style="color:#1E4A7A"> ${(p.cost/tC*100).toFixed(0)}%</span></div>`).join("");
+  mkDonut('ov-don',data.map(p=>p.media),data.map(p=>p.cost),data.map(p=>PC[p.media]||'#888'),tC);
+  document.getElementById('ov-leg').innerHTML=data.map(p=>`<div class="li"><span class="ld" style="background:${PC[p.media]||'#888'}"></span><span style="color:#4A6FA5">${sht(p.media)}</span><span style="color:#1E4A7A"> ${(p.cost/tC*100).toFixed(0)}%</span></div>`).join('');
 }
 
 // ─── RENDER PLATFORM ──────────────────────────────────────────────────────────
 function renderPlat(name,pid){
-  const data = LIVE.length ? LIVE : deriveSeedFromAUD();
+  const data=LIVE.length?LIVE:seedFromAUD();
   const pd=data.find(p=>p.media===name)||{},ad=AUD[name]||[],dl=DAILY[name]||[];
-  document.getElementById(`${pid}-kpis`).innerHTML=[kpiCard("Impressions",fN(pd.imp||0),"total"),kpiCard("Video Views",fN(pd.views||0),"3-second+"),kpiCard("Total Spend",fC(pd.cost||0),"budget",true),kpiCard("CPV",fCpv(pd.cpv||0),"cost per view")].join("");
+  document.getElementById(`${pid}-kpis`).innerHTML=[kpiCard('Impressions',fN(pd.imp||0),'total'),kpiCard('Video Views',fN(pd.views||0),'3-second+'),kpiCard('Total Spend',fC(pd.cost||0),'budget',true),kpiCard('CPV',fCpv(pd.cpv||0),'cost per view')].join('');
   const audEl=document.getElementById(`${pid}-aud`);
-  if(audEl){
-    const tI=ad.reduce((s,a)=>s+a.imp,0);
-    if(ad.length>=2){
-      audEl.innerHTML=ad.map(a=>audCard2(a,tI)).join("");
-      mkGrouped(`${pid}-ca`,["Impressions","Video Views"],{label:ad[0].aud,data:[ad[0].imp,ad[0].views],backgroundColor:(AC[ad[0].aud]||"#888")+"BB",borderColor:AC[ad[0].aud]||"#888",borderWidth:1.5,borderRadius:5},{label:ad[1].aud,data:[ad[1].imp,ad[1].views],backgroundColor:(AC[ad[1].aud]||"#888")+"BB",borderColor:AC[ad[1].aud]||"#888",borderWidth:1.5,borderRadius:5});
-      mkBar(`${pid}-cb`,ad.map(a=>a.aud),[{data:ad.map(a=>a.views>0?a.cost/a.views:0),backgroundColor:ad.map(a=>(AC[a.aud]||"#888")+"BB"),borderColor:ad.map(a=>AC[a.aud]||"#888"),borderWidth:1.5,borderRadius:5}],{yFmt:v=>`₪${v.toFixed(3)}`,tt:{callbacks:{label:c=>` ₪${c.raw.toFixed(3)}`}}});
-    }else if(ad.length===1){audEl.innerHTML=audCard1(ad[0]);}
-  }
+  if(audEl){const tI=ad.reduce((s,a)=>s+a.imp,0);if(ad.length>=2){audEl.innerHTML=ad.map(a=>audCard2(a,tI)).join('');mkGrouped(`${pid}-ca`,['Impressions','Video Views'],{label:ad[0].aud,data:[ad[0].imp,ad[0].views],backgroundColor:(AC[ad[0].aud]||'#888')+'BB',borderColor:AC[ad[0].aud]||'#888',borderWidth:1.5,borderRadius:5},{label:ad[1].aud,data:[ad[1].imp,ad[1].views],backgroundColor:(AC[ad[1].aud]||'#888')+'BB',borderColor:AC[ad[1].aud]||'#888',borderWidth:1.5,borderRadius:5});mkBar(`${pid}-cb`,ad.map(a=>a.aud),[{data:ad.map(a=>a.views>0?a.cost/a.views:0),backgroundColor:ad.map(a=>(AC[a.aud]||'#888')+'BB'),borderColor:ad.map(a=>AC[a.aud]||'#888'),borderWidth:1.5,borderRadius:5}],{yFmt:v=>`₪${v.toFixed(3)}`,tt:{callbacks:{label:c=>` ₪${c.raw.toFixed(3)}`}}});}else if(ad.length===1)audEl.innerHTML=audCard1(ad[0]);}
   const tbl=document.getElementById(`${pid}-tbl`);
   if(tbl&&dl.length)tbl.innerHTML=dailyTable(dl);
 }
@@ -361,21 +353,21 @@ function renderPlat(name,pid){
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 function showTab(id,btn){
   killCharts();
-  document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-  document.getElementById("pane-"+id).classList.add("active");
-  if(btn)btn.classList.add("active");
-  if(id==="ov"){renderOv();return;}
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(id==='ov'){renderOv();return;}
   const t=PLATS.find(p=>p.id===id);
   if(t)renderPlat(t.name,id);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-setSt("loading");
-renderOv(); // render immediately with derived data
-
-doRefresh(); // fetch live data right away
-setInterval(doRefresh, 5 * 60 * 1000); // auto-refresh every 5 min
+setSt('loading');
+LIVE = seedFromAUD();    // show something immediately
+renderOv();
+doRefresh();             // fetch live data right away
+setInterval(doRefresh, 5 * 60 * 1000);   // auto-refresh every 5 min
 </script>
 </body>
 </html>
