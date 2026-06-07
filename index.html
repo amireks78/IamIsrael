@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I AM ISRAEL — Campaign Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:#060D1B;color:#E8F0F8;font-family:'Outfit','Segoe UI',sans-serif}
+.tab-nav{background:#080F1F;border-bottom:1px solid #1E3A5F;padding:0 20px;display:flex;align-items:center;gap:1px;overflow-x:auto;position:sticky;top:0;z-index:100}
+.tab-btn{background:none;border:none;color:#3A5A80;font-size:11px;font-weight:600;padding:11px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-family:inherit}
+.tab-btn:hover{color:#7A9BBF}.tab-btn.active{color:#5B9FDE;border-bottom-color:#5B9FDE}
+.pane{padding:18px 22px;display:none}.pane.active{display:block}
+.card{background:#0D1B2E;border:1px solid #1E3A5F;border-radius:11px}
+.card-hd{padding:10px 18px;border-bottom:1px solid #142030;display:flex;align-items:center;justify-content:space-between}
+.kpi-grid{display:grid;gap:9px;margin-bottom:16px}
+.g5{grid-template-columns:repeat(5,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.kpi-card{padding:13px 15px}
+.kl{font-size:9px;font-weight:700;color:#1E4A7A;text-transform:uppercase;letter-spacing:.9px;margin-bottom:7px}
+.kv{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.1}
+.kn{font-size:9px;color:#1E4A7A;margin-top:4px}
+.aud-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.aud-grid-3{grid-template-columns:1fr 1fr 1fr}
+.aud-card{padding:16px 18px}
+.aud-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:11px;display:flex;align-items:center;gap:7px}
+.aud-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.aud-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.asl{font-size:9px;color:#1E4A7A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.asv{font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px}
+.cc{padding:15px}.ct{font-size:9px;font-weight:700;color:#1E4A7A;text-transform:uppercase;letter-spacing:.9px;margin-bottom:12px}
+.cw{position:relative}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:7px 14px;color:#1E4A7A;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #142030;text-align:right}
+.tbl th:first-child{text-align:left}
+.tbl td{padding:9px 14px;border-bottom:1px solid #0C1A28;text-align:right;color:#7A9BBF}
+.tbl td:first-child{text-align:left}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:#102035}
+.mono{font-family:'JetBrains Mono',monospace}
+.secttl{font-size:10px;font-weight:700;color:#2A5090;text-transform:uppercase;letter-spacing:.5px;margin-bottom:11px;padding-bottom:7px;border-bottom:1px solid #142030}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:10px}
+.li{display:flex;align-items:center;gap:4px;font-size:10px}
+.ld{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.eff-w{width:52px;height:3px;background:#142030;border-radius:2px;overflow:hidden;display:inline-block}
+.eff-b{height:100%;border-radius:2px}
+.note{font-size:10px;color:#2A5090;font-style:italic;margin-top:8px}
+.tag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:9px;text-transform:uppercase;letter-spacing:.4px}
+.footer{margin-top:16px;padding-top:12px;border-top:1px solid #0C1A28;display:flex;justify-content:space-between;font-size:9px;color:#1A3A5C;flex-wrap:wrap;gap:4px}
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:12px;font-weight:500;
+  background:#0D1B2E;border:1px solid #1E3A5F;display:none;z-index:9999;
+  transition:opacity .4s;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+/* Spin animation for refresh button */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{display:inline-block;animation:spin .8s linear infinite}
+@media(max-width:900px){.g5,.g4{grid-template-columns:repeat(2,1fr)}.aud-grid-3,.charts-3,.charts-2{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.g5,.g4,.aud-grid,.aud-grid-3,.charts-3,.charts-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div style="background:#0A1628;border-bottom:1px solid #1E3A5F;padding:14px 22px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:101">
+  <div style="width:4px;height:44px;background:linear-gradient(180deg,#003F8A 0%,#fff 50%,#003F8A 100%);border-radius:2px;flex-shrink:0"></div>
+  <div style="flex:1">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:18px;font-weight:700;letter-spacing:-.4px">I AM ISRAEL</span>
+      <span style="font-size:9px;font-weight:700;background:#122040;color:#5B9FDE;padding:3px 9px;border-radius:20px;border:1px solid #1E4F8F;text-transform:uppercase;letter-spacing:.8px">Campaign Dashboard</span>
+    </div>
+    <p style="margin:2px 0 0;font-size:11px;color:#3A5A80">Ministry of Tourism Israel · USA · Conservative &amp; Evangelical · June 2026</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+    <div style="text-align:right">
+      <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+        <span id="sDot" style="width:8px;height:8px;border-radius:50%;background:#F0A500;display:inline-block;transition:background .4s"></span>
+        <span id="sTxt" style="font-size:11px;color:#94A3B8">Loading…</span>
+      </div>
+      <div id="rTxt" style="font-size:10px;color:#1E3A60;margin-top:2px;text-align:right"></div>
+    </div>
+    <button onclick="doRefresh()" id="rBtn"
+      style="background:#1B5FCC;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s;display:flex;align-items:center;gap:7px">
+      <span id="rIcon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('ov',this)">Overview</button>
+  <button class="tab-btn" onclick="showTab('meta',this)">Meta</button>
+  <button class="tab-btn" onclick="showTab('x',this)">X (Twitter)</button>
+  <button class="tab-btn" onclick="showTab('tik',this)">TikTok</button>
+  <button class="tab-btn" onclick="showTab('oa',this)">OA Video</button>
+  <button class="tab-btn" onclick="showTab('yt',this)">YouTube</button>
+  <button class="tab-btn" onclick="showTab('fox',this)">Fox CTV</button>
+  <button class="tab-btn" onclick="showTab('para',this)">Paramount CTV</button>
+</div>
+
+<!-- OVERVIEW -->
+<div id="pane-ov" class="pane active">
+  <div class="kpi-grid g5" id="ov-kpis"></div>
+  <div style="margin-bottom:16px"><div class="secttl">Audience Performance</div><div class="aud-grid aud-grid-3" id="ov-aud"></div></div>
+  <div class="card" style="margin-bottom:16px;overflow:hidden">
+    <div class="card-hd">
+      <span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase;letter-spacing:.4px">Platform Breakdown</span>
+      <span style="font-size:10px;color:#1E4A7A">7 channels · June 2026</span>
+    </div>
+    <table class="tbl" id="ov-tbl"></table>
+  </div>
+  <div class="charts-3">
+    <div class="card cc"><div class="ct">Impressions by Channel</div><div class="cw" style="height:200px"><canvas id="ov-imp"></canvas></div></div>
+    <div class="card cc"><div class="ct">Budget Allocation</div><div class="cw" style="height:140px"><canvas id="ov-don"></canvas></div><div class="legend" id="ov-leg"></div></div>
+    <div class="card cc"><div class="ct">CPV Efficiency — lower is better</div><div class="cw" style="height:200px"><canvas id="ov-cpv"></canvas></div></div>
+  </div>
+  <div class="footer">
+    <span>Ministry of Tourism Israel · I AM ISRAEL Campaign · USA · June 2026</span>
+    <span>Live data: Google Sheets via Supermetrics · Dashboard: Claude AI</span>
+  </div>
+</div>
+
+<!-- PLATFORM PANES -->
+<div id="pane-meta" class="pane"><div class="kpi-grid g4" id="meta-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div class="aud-grid" id="meta-aud"></div></div><div class="charts-2"><div class="card cc"><div class="ct">Impressions &amp; Views by Audience</div><div class="cw" style="height:200px"><canvas id="meta-ca"></canvas></div></div><div class="card cc"><div class="ct">CPV by Audience</div><div class="cw" style="height:200px"><canvas id="meta-cb"></canvas></div></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="meta-tbl"></table></div></div>
+
+<div id="pane-x" class="pane"><div class="kpi-grid g4" id="x-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div class="aud-grid" id="x-aud"></div></div><div class="charts-2"><div class="card cc"><div class="ct">Impressions &amp; Views by Audience</div><div class="cw" style="height:200px"><canvas id="x-ca"></canvas></div></div><div class="card cc"><div class="ct">CPV by Audience</div><div class="cw" style="height:200px"><canvas id="x-cb"></canvas></div></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="x-tbl"></table></div></div>
+
+<div id="pane-tik" class="pane"><div class="kpi-grid g4" id="tik-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div id="tik-aud"></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="tik-tbl"></table></div></div>
+
+<div id="pane-oa" class="pane"><div class="kpi-grid g4" id="oa-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div class="aud-grid" id="oa-aud"></div></div><div class="charts-2"><div class="card cc"><div class="ct">Impressions &amp; Views by Audience</div><div class="cw" style="height:200px"><canvas id="oa-ca"></canvas></div></div><div class="card cc"><div class="ct">CPV by Audience</div><div class="cw" style="height:200px"><canvas id="oa-cb"></canvas></div></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="oa-tbl"></table></div></div>
+
+<div id="pane-yt" class="pane"><div class="kpi-grid g4" id="yt-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div id="yt-aud"></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="yt-tbl"></table></div></div>
+
+<div id="pane-fox" class="pane"><div class="kpi-grid g4" id="fox-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div id="fox-aud"></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="fox-tbl"></table></div></div>
+
+<div id="pane-para" class="pane"><div class="kpi-grid g4" id="para-kpis"></div><div style="margin-bottom:16px"><div class="secttl">Audience Breakdown</div><div id="para-aud"></div></div><div class="card" style="overflow:hidden"><div class="card-hd"><span style="font-size:11px;font-weight:700;color:#C4D4E8;text-transform:uppercase">Daily Breakdown</span></div><table class="tbl" id="para-tbl"></table></div></div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const API = 'https://script.google.com/macros/s/AKfycbykUDPzr2MzkkZvhyzEMsg1qF5zKuFe1yMEO1g1PUCDGbdbtsyK4xAAhebJkORhnciT/exec';
+const C0MAP = {
+  'FB':'Meta','X':'X','TIK':'TikTok',
+  'OA Video':'OA Video','YouTube':'YouTube','YouTube ':'YouTube',
+  'Fox':'Fox CTV','Paramount':'Paramount CTV','Paramount ':'Paramount CTV'
+};
+
+// ─── MUTABLE DATA ─────────────────────────────────────────────────────────────
+let AUD = {
+  Meta:[{aud:"Conservative",imp:155790,views:112354,cost:7124.94},{aud:"Evangelical",imp:197711,views:131779,cost:7096.60}],
+  X:[{aud:"Conservative",imp:335338,views:60667,cost:17937,est:true},{aud:"Evangelical",imp:368920,views:77320,cost:12812,est:true}],
+  TikTok:[{aud:"Evangelical",imp:240608,views:239450,cost:2285.88}],
+  "OA Video":[{aud:"Conservative",imp:926370,views:911489,cost:18924.89},{aud:"Evangelical",imp:3423581,views:3348196,cost:20074.42}],
+  YouTube:[{aud:"Conservative",imp:160658,views:55264,cost:1591.27}],
+  "Fox CTV":[{aud:"General",imp:29438,views:29092,cost:1303.78}],
+  "Paramount CTV":[{aud:"Evangelical",imp:52857,views:51348,cost:7885.92}],
+};
+let DAILY = {
+  Meta:[{date:"Jun 5",aud:"Conservative",imp:58923,views:43039,cost:2630.01},{date:"Jun 5",aud:"Evangelical",imp:70674,views:46869,cost:2379.90},{date:"Jun 6",aud:"Conservative",imp:96867,views:69315,cost:4494.93},{date:"Jun 6",aud:"Evangelical",imp:127037,views:84910,cost:4716.70}],
+  X:[{date:"Jun 5",aud:"Conservative",imp:219432,views:40121,cost:17936.60},{date:"Jun 5",aud:"Evangelical",imp:276082,views:58533,cost:12812.30},{date:"Jun 6",aud:"Conservative",imp:115906,views:20546,cost:2734.48},{date:"Jun 6",aud:"Evangelical",imp:92838,views:18787,cost:1962.82}],
+  TikTok:[{date:"Jun 5",aud:"Evangelical",imp:94751,views:94271,cost:737.38},{date:"Jun 6",aud:"Evangelical",imp:145857,views:145179,cost:1548.50}],
+  "OA Video":[{date:"Jun 5",aud:"Conservative",imp:461079,views:459072,cost:11754.29},{date:"Jun 5",aud:"Evangelical",imp:1477541,views:1469977,cost:15516.10},{date:"Jun 6",aud:"Conservative",imp:465291,views:452417,cost:7170.60},{date:"Jun 6",aud:"Evangelical",imp:1946040,views:1878219,cost:4558.32}],
+  YouTube:[{date:"Jun 5",aud:"Conservative",imp:160610,views:55238,cost:1590.85},{date:"Jun 6",aud:"Conservative",imp:48,views:26,cost:0.42}],
+  "Fox CTV":[{date:"Jun 5",aud:"General",imp:8185,views:8182,cost:361.53},{date:"Jun 6",aud:"General",imp:21253,views:20910,cost:942.25}],
+  "Paramount CTV":[{date:"Jun 5",aud:"Evangelical",imp:14386,views:14384,cost:2130.91},{date:"Jun 6",aud:"Evangelical",imp:38471,views:36964,cost:5755.01}],
+};
+let LIVE = [];
+const PLATS=[{id:"meta",name:"Meta"},{id:"x",name:"X"},{id:"tik",name:"TikTok"},{id:"oa",name:"OA Video"},{id:"yt",name:"YouTube"},{id:"fox",name:"Fox CTV"},{id:"para",name:"Paramount CTV"}];
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const pNum = v => typeof v==='number' ? v : parseFloat(String(v??'').replace(/[^0-9.]/g,''))||0;
+const fN   = n => n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?Math.round(n/1e3)+'K':String(Math.round(n));
+const fC   = n => '₪'+Math.round(n).toLocaleString();
+const fCpv = n => '₪'+n.toFixed(3);
+const fP   = n => n.toFixed(1)+'%';
+const sht  = m => m==='Paramount CTV'?'Paramount':m==='Fox CTV'?'Fox':m;
+const MT   = '#3E6490', GR='rgba(30,58,95,0.35)';
+const PC   = {Meta:'#1877F2',X:'#9CA3AF',TikTok:'#FF0050','OA Video':'#4285F4',YouTube:'#FF0000','Fox CTV':'#FF6B35','Paramount CTV':'#0064FF'};
+const AC   = {Conservative:'#F0A500',Evangelical:'#5B9FDE',General:'#64748B'};
+
+function fmtDate(d) {
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Handles "2026-06-05", "2026-06-05T00:00:00Z", or Date objects
+  const s = d instanceof Date ? d.toISOString() : String(d);
+  const p = s.split('T')[0].split('-');
+  return p.length>=3 ? M[+p[1]-1]+' '+parseInt(p[2]) : s;
+}
+const getAud = s => String(s).includes('Conservative')?'Conservative':String(s).includes('Evangelical')?'Evangelical':'General';
+function sortDates(arr){
+  const M={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+  return arr.sort((a,b)=>{const[ma,da]=a.date.split(' '),[mb,db]=b.date.split(' ');return(M[ma]*31+ +da)-(M[mb]*31+ +db);});
+}
+function audTotals(){
+  const t={};
+  Object.values(AUD).flat().forEach(a=>{
+    if(!t[a.aud])t[a.aud]={imp:0,views:0,cost:0};
+    t[a.aud].imp+=a.imp;t[a.aud].views+=a.views;t[a.aud].cost+=a.cost;
+  });
+  return t;
+}
+function platsByAud(aud){return Object.entries(AUD).filter(([,r])=>r.some(a=>a.aud===aud)).map(([k])=>sht(k)).join(', ');}
+
+// ─── FETCH VIA APPS SCRIPT (JSONP — bypasses CORS) ───────────────────────────
+function fetchSheet(sheetName) {
+  return new Promise((resolve, reject) => {
+    const cb = '__cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    let done = false;
+
+    const cleanup = () => {
+      done = true;
+      delete window[cb];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+
+    window[cb] = (data) => {
+      cleanup();
+      if (data && data.error) reject(new Error(sheetName + ': ' + data.error));
+      else if (!Array.isArray(data)) reject(new Error(sheetName + ': unexpected format'));
+      else resolve(data);
+    };
+
+    script.onerror = () => { cleanup(); reject(new Error('Load failed: ' + sheetName)); };
+    setTimeout(() => { if (!done) { cleanup(); reject(new Error('Timeout: ' + sheetName)); } }, 25000);
+
+    script.src = `${API}?sheet=${encodeURIComponent(sheetName)}&callback=${cb}&t=${Date.now()}`;
+    document.head.appendChild(script);
+  });
+}
+
+// ─── PARSERS ──────────────────────────────────────────────────────────────────
+function parseSUM(rows) {
+  const res=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r[0]) continue;
+    const name=C0MAP[String(r[0]).trim()]; if(!name) continue;
+    res.push({media:name, imp:pNum(r[2]), views:pNum(r[3]), cost:pNum(r[4]), cpv:pNum(r[5])});
+  }
+  return res;
+}
+
+function parseSheet(rows, campCol, impCol, viewsCol, costFn) {
+  const dayMap={}, audMap={};
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r[0]||!r[campCol]) continue;
+    const date=fmtDate(r[0]), aud=getAud(r[campCol]);
+    const imp=pNum(r[impCol]), views=pNum(r[viewsCol]), cost=costFn(r);
+    if(!imp&&!views&&!cost) continue;
+    const k=date+'|'+aud;
+    if(!dayMap[k]) dayMap[k]={date,aud,imp:0,views:0,cost:0};
+    dayMap[k].imp+=imp; dayMap[k].views+=views; dayMap[k].cost+=cost;
+    if(!audMap[aud]) audMap[aud]={aud,imp:0,views:0,cost:0};
+    audMap[aud].imp+=imp; audMap[aud].views+=views; audMap[aud].cost+=cost;
+  }
+  return {daily:sortDates(Object.values(dayMap)), aud:Object.values(audMap)};
+}
+
+function parseDV(rows) {
+  const platDay={}, platAud={};
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!r[0]||!r[1]) continue;
+    const order=String(r[1]);
+    const plat=order.includes('OA Video')?'OA Video':order.includes('YouTube')?'YouTube':/FOX|Fox/.test(order)?'Fox CTV':order.includes('Paramount')?'Paramount CTV':null;
+    if(!plat) continue;
+    const date=fmtDate(r[0]), aud=getAud(order);
+    const imp=pNum(r[2]), views=pNum(r[3]), cost=pNum(r[4]);
+    if(!imp&&!views&&!cost) continue;
+    if(!platDay[plat]) platDay[plat]={};
+    if(!platAud[plat]) platAud[plat]={};
+    const k=date+'|'+aud;
+    if(!platDay[plat][k]) platDay[plat][k]={date,aud,imp:0,views:0,cost:0};
+    platDay[plat][k].imp+=imp; platDay[plat][k].views+=views; platDay[plat][k].cost+=cost;
+    if(!platAud[plat][aud]) platAud[plat][aud]={aud,imp:0,views:0,cost:0};
+    platAud[plat][aud].imp+=imp; platAud[plat][aud].views+=views; platAud[plat][aud].cost+=cost;
+  }
+  const res={};
+  for(const p of Object.keys(platDay))
+    res[p]={daily:sortDates(Object.values(platDay[p])),aud:Object.values(platAud[p])};
+  return res;
+}
+
+// ─── FETCH ALL ────────────────────────────────────────────────────────────────
+async function fetchAllData() {
+  const [rSum,rMeta,rX,rTik,rDv] = await Promise.allSettled([
+    fetchSheet('SUM'), fetchSheet('Meta'), fetchSheet('x'),
+    fetchSheet('tiktok'), fetchSheet('dv')
+  ]);
+  const errors=[];
+  const ok = (r,name) => { if(r.status==='fulfilled') return r.value; errors.push(name); return null; };
+
+  const sumRows  = ok(rSum,'SUM');
+  const metaRows = ok(rMeta,'Meta');
+  const xRows    = ok(rX,'X');
+  const tikRows  = ok(rTik,'TikTok');
+  const dvRows   = ok(rDv,'DV360');
+
+  const newLIVE = sumRows ? parseSUM(sumRows) : LIVE;
+
+  const metaP = metaRows ? parseSheet(metaRows, 1,3,4, r=>pNum(r[5])) : null;
+  const xP    = xRows    ? parseSheet(xRows,    1,2,3, r=>{for(let j=r.length-1;j>=4;j--){const v=pNum(r[j]);if(v>0)return v;}return pNum(r[4]);}) : null;
+  const tikP  = tikRows  ? parseSheet(tikRows,  1,3,4, r=>pNum(r[5])) : null;
+  const dvP   = dvRows   ? parseDV(dvRows) : {};
+
+  if(xP) xP.aud = xP.aud.map(a=>({...a,est:true}));
+
+  const g = (parsed,key,fallback) => parsed?.[key]?.length ? parsed[key] : fallback;
+
+  const newAUD = {
+    Meta:           g(metaP,'aud', AUD.Meta),
+    X:              g(xP,   'aud', AUD.X),
+    TikTok:         g(tikP, 'aud', AUD.TikTok),
+    'OA Video':     g(dvP['OA Video'],    'aud', AUD['OA Video']),
+    YouTube:        g(dvP['YouTube'],     'aud', AUD.YouTube),
+    'Fox CTV':      g(dvP['Fox CTV'],     'aud', AUD['Fox CTV']),
+    'Paramount CTV':g(dvP['Paramount CTV'],'aud',AUD['Paramount CTV']),
+  };
+  const newDAILY = {
+    Meta:           g(metaP,'daily', DAILY.Meta),
+    X:              g(xP,   'daily', DAILY.X),
+    TikTok:         g(tikP, 'daily', DAILY.TikTok),
+    'OA Video':     g(dvP['OA Video'],    'daily', DAILY['OA Video']),
+    YouTube:        g(dvP['YouTube'],     'daily', DAILY.YouTube),
+    'Fox CTV':      g(dvP['Fox CTV'],     'daily', DAILY['Fox CTV']),
+    'Paramount CTV':g(dvP['Paramount CTV'],'daily',DAILY['Paramount CTV']),
+  };
+  return {newLIVE, newAUD, newDAILY, errors};
+}
+
+function seedFromAUD(){
+  return Object.entries(AUD).map(([name,rows])=>{
+    const imp=rows.reduce((s,r)=>s+r.imp,0),views=rows.reduce((s,r)=>s+r.views,0),cost=rows.reduce((s,r)=>s+r.cost,0);
+    return {media:name,imp,views,cost,cpv:views>0?cost/views:0};
+  });
+}
+
+// ─── STATUS + TOAST ───────────────────────────────────────────────────────────
+function setSt(s,msg){
+  const cfg={live:{c:'#22C55E',t:msg||'✓ Live'},loading:{c:'#F0A500',t:'Fetching…'},error:{c:'#EF4444',t:msg||'Error'},cached:{c:'#3B82F6',t:'Cached'}};
+  const{c,t}=cfg[s]||cfg.cached;
+  document.getElementById('sDot').style.background=c;
+  document.getElementById('sTxt').textContent=t;
+  document.getElementById('sTxt').style.color=c;
+}
+function showToast(msg,ok=true){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.style.cssText=`position:fixed;bottom:24px;right:24px;padding:11px 18px;border-radius:10px;font-size:12px;font-weight:500;background:#0D1B2E;border:1px solid ${ok?'#22C55E':'#EF4444'};color:${ok?'#22C55E':'#EF4444'};display:block;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.6)`;
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',4000);
+}
+
+// ─── REFRESH ──────────────────────────────────────────────────────────────────
+let refreshing=false;
+async function doRefresh(){
+  if(refreshing)return; refreshing=true;
+  const btn=document.getElementById('rBtn'),icon=document.getElementById('rIcon');
+  btn.disabled=true; icon.className='spinning'; icon.textContent='↻';
+  setSt('loading');
+  try{
+    const{newLIVE,newAUD,newDAILY,errors}=await fetchAllData();
+    LIVE=newLIVE; AUD=newAUD; DAILY=newDAILY;
+    const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('rTxt').textContent='Updated '+now;
+    if(errors.length){setSt('error',`⚠ Partial — failed: ${errors.join(', ')}`);showToast(`⚠ Partial (${errors.join(', ')})`,false);}
+    else{setSt('live',`✓ Live · ${now}`);showToast('✓ All sheets refreshed');}
+    rerenderActive();
+  }catch(e){
+    console.error(e);setSt('error','⚠ '+e.message);showToast('⚠ '+e.message,false);
+    if(!LIVE.length){LIVE=seedFromAUD();rerenderActive();}
+  }finally{btn.disabled=false;icon.className='';icon.textContent='↻';refreshing=false;}
+}
+function rerenderActive(){document.querySelector('.tab-btn.active')?.click();}
+
+// ─── CHARTS ───────────────────────────────────────────────────────────────────
+let CH={};
+function killCharts(){Object.values(CH).forEach(c=>c?.destroy());CH={};}
+function mkBar(id,labels,datasets,opts={}){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:opts.tt||{}},scales:{x:{ticks:{color:MT,font:{size:10},maxRotation:opts.rot||0},grid:{display:false},border:{display:false}},y:{ticks:{callback:opts.yFmt||(v=>fN(v)),color:MT,font:{size:10}},grid:{color:GR},border:{display:false}}}}});}
+function mkHBar(id,labels,datasets){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'bar',data:{labels,datasets},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ₪${c.raw.toFixed(3)}`}}},scales:{x:{ticks:{callback:v=>`₪${v.toFixed(2)}`,color:MT,font:{size:10}},grid:{color:GR},border:{display:false}},y:{ticks:{color:MT,font:{size:10}},grid:{display:false},border:{display:false}}}}});}
+function mkDonut(id,labels,data,colors,total){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'BB'),borderColor:'#0D1B2E',borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fC(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});}
+function mkGrouped(id,labels,d1,d2){const el=document.getElementById(id);if(!el)return;CH[id]=new Chart(el,{type:'bar',data:{labels,datasets:[d1,d2]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fN(c.raw)}`}}},scales:{x:{ticks:{color:MT,font:{size:11}},grid:{display:false},border:{display:false}},y:{ticks:{callback:v=>fN(v),color:MT,font:{size:10}},grid:{color:GR},border:{display:false}}}}});}
+
+// ─── HTML PIECES ──────────────────────────────────────────────────────────────
+const kpiCard=(l,v,n,gold=false)=>`<div class="card kpi-card"><div class="kl">${l}</div><div class="kv" style="color:${gold?'#F0A500':'#E8F0F8'}">${v}</div><div class="kn">${n}</div></div>`;
+const audCard2=(a,tI)=>{const c=AC[a.aud]||'#888',cv=a.views>0?a.cost/a.views:0,vr=a.imp>0?a.views/a.imp*100:0,sh=tI>0?a.imp/tI*100:0,est=a.est?'<span style="color:#64748B;font-size:8px"> est.</span>':'';return`<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a.aud}<span style="font-size:9px;opacity:.6;margin-left:3px">${sh.toFixed(0)}% of imp</span></div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(a.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(a.views)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:${vr>80?'#22C55E':vr>50?'#F0A500':'#94A3B8'}">${fP(vr)}</div></div><div><div class="asl">CPV${est}</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">Spend${est}</div><div class="asv" style="color:#F0A500">${fC(a.cost)}</div></div></div></div>`;};
+const audCard1=(a)=>{const c=AC[a.aud]||'#888',cv=a.views>0?a.cost/a.views:0,vr=a.imp>0?a.views/a.imp*100:0;return`<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a.aud}</div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(a.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(a.views)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:${vr>80?'#22C55E':vr>50?'#F0A500':'#94A3B8'}">${fP(vr)}</div></div><div><div class="asl">CPV</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">Spend</div><div class="asv" style="color:#F0A500">${fC(a.cost)}</div></div></div><p class="note">Only ${a.aud} audience active on this platform</p></div>`;};
+function dailyTable(dl){return`<thead><tr><th style="text-align:left">Date</th><th>Audience</th><th>Impressions</th><th>Video Views</th><th>View Rate</th><th>Spend</th><th>CPV</th></tr></thead><tbody>${dl.map(d=>{const vr=d.imp>0?d.views/d.imp*100:0,cv=d.views>0?d.cost/d.views:0,c=AC[d.aud]||'#888';return`<tr><td style="font-weight:600;color:#D0E0F0">${d.date}</td><td style="text-align:center"><span class="tag" style="background:${c}22;color:${c}">${d.aud}</span></td><td class="mono">${d.imp.toLocaleString()}</td><td class="mono">${d.views.toLocaleString()}</td><td style="color:${vr>80?'#22C55E':vr>50?'#F0A500':'#64748B'};font-weight:600">${fP(vr)}</td><td class="mono" style="color:#F0A500;font-weight:600">${fC(d.cost)}</td><td class="mono" style="color:#E8F0F8">${fCpv(cv)}</td></tr>`;}).join('')}</tbody>`;}
+
+// ─── RENDER OVERVIEW ──────────────────────────────────────────────────────────
+function renderOv(){
+  const data=LIVE.length?LIVE:seedFromAUD();
+  const T=data.reduce((a,p)=>({imp:a.imp+p.imp,views:a.views+p.views,cost:a.cost+p.cost}),{imp:0,views:0,cost:0});
+  const acpv=T.views>0?T.cost/T.views:0,vr=T.imp>0?T.views/T.imp*100:0;
+  document.getElementById('ov-kpis').innerHTML=[kpiCard('Total Impressions',fN(T.imp),'all channels'),kpiCard('Video Views',fN(T.views),'3-second+'),kpiCard('Total Spend',fC(T.cost),'budget consumed',true),kpiCard('Avg CPV',fCpv(acpv),'cost per view'),kpiCard('View Rate',fP(vr),'imp → views')].join('');
+  const at=audTotals();
+  document.getElementById('ov-aud').innerHTML=['Conservative','Evangelical','General'].filter(a=>at[a]).map(a=>{const ad=at[a],c=AC[a],cv=ad.views>0?ad.cost/ad.views:0;return`<div class="card aud-card" style="border-color:${c}33"><div class="aud-label" style="color:${c}"><span class="aud-dot" style="background:${c}"></span>${a}</div><div class="aud-stats"><div><div class="asl">Impressions</div><div class="asv" style="color:#E8F0F8">${fN(ad.imp)}</div></div><div><div class="asl">Video Views</div><div class="asv" style="color:#E8F0F8">${fN(ad.views)}</div></div><div><div class="asl">Spend</div><div class="asv" style="color:#F0A500">${fC(ad.cost)}</div></div><div><div class="asl">CPV</div><div class="asv" style="color:${c}">${fCpv(cv)}</div></div><div><div class="asl">View Rate</div><div class="asv" style="color:#22C55E">${fP(ad.imp>0?ad.views/ad.imp*100:0)}</div></div><div><div class="asl">Platforms</div><div class="asv" style="color:#5A7B9F;font-size:10px;padding-top:2px">${platsByAud(a)}</div></div></div></div>`;}).join('');
+  const mxCpv=Math.max(...data.map(p=>p.cpv));
+  document.getElementById('ov-tbl').innerHTML=`<thead><tr><th style="text-align:left">Channel</th><th>Audiences</th><th>Impressions</th><th>Video Views</th><th>View Rate</th><th>Spend</th><th>CPV</th><th>Efficiency</th></tr></thead><tbody>${data.map(p=>{const vr=p.imp>0?p.views/p.imp*100:0,eff=mxCpv>0?(mxCpv-p.cpv)/mxCpv*100:0,ec=eff>75?'#22C55E':eff>45?'#F0A500':'#EF4444',vc=vr>80?'#22C55E':vr>50?'#F0A500':'#64748B';const auds=(AUD[p.media]||[]).map(a=>`<span class="tag" style="background:${AC[a.aud]}22;color:${AC[a.aud]}">${a.aud}</span>`).join(' ');return`<tr><td><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:${PC[p.media]||'#888'};flex-shrink:0"></span><span style="font-weight:600;color:#D0E0F0">${p.media}</span></div></td><td style="text-align:center">${auds}</td><td class="mono">${p.imp.toLocaleString()}</td><td class="mono">${p.views.toLocaleString()}</td><td style="color:${vc};font-weight:600">${fP(vr)}</td><td class="mono" style="color:#F0A500;font-weight:600">${fC(p.cost)}</td><td class="mono" style="color:#E8F0F8">${fCpv(p.cpv)}</td><td><div style="display:flex;align-items:center;gap:5px;justify-content:flex-end"><div class="eff-w"><div class="eff-b" style="width:${Math.max(eff,3).toFixed(0)}%;background:${ec}"></div></div><span style="font-size:10px;color:#1E4A7A;min-width:24px;text-align:right">${Math.round(eff)}%</span></div></td></tr>`;}).join('')}</tbody>`;
+  mkBar('ov-imp',data.map(p=>sht(p.media)),[{data:data.map(p=>p.imp),backgroundColor:data.map(p=>(PC[p.media]||'#888')+'AA'),borderColor:data.map(p=>PC[p.media]||'#888'),borderWidth:1.5,borderRadius:5}],{rot:40,tt:{callbacks:{label:c=>` ${fN(c.raw)}`}}});
+  const s=[...data].sort((a,b)=>a.cpv-b.cpv);
+  mkHBar('ov-cpv',s.map(p=>sht(p.media)),[{data:s.map(p=>p.cpv),backgroundColor:s.map(p=>(PC[p.media]||'#888')+'AA'),borderColor:s.map(p=>PC[p.media]||'#888'),borderWidth:1.5,borderRadius:4}]);
+  const tC=data.reduce((a,p)=>a+p.cost,0);
+  mkDonut('ov-don',data.map(p=>p.media),data.map(p=>p.cost),data.map(p=>PC[p.media]||'#888'),tC);
+  document.getElementById('ov-leg').innerHTML=data.map(p=>`<div class="li"><span class="ld" style="background:${PC[p.media]||'#888'}"></span><span style="color:#4A6FA5">${sht(p.media)}</span><span style="color:#1E4A7A"> ${(p.cost/tC*100).toFixed(0)}%</span></div>`).join('');
+}
+
+// ─── RENDER PLATFORM ──────────────────────────────────────────────────────────
+function renderPlat(name,pid){
+  const data=LIVE.length?LIVE:seedFromAUD();
+  const pd=data.find(p=>p.media===name)||{},ad=AUD[name]||[],dl=DAILY[name]||[];
+  document.getElementById(`${pid}-kpis`).innerHTML=[kpiCard('Impressions',fN(pd.imp||0),'total'),kpiCard('Video Views',fN(pd.views||0),'3-second+'),kpiCard('Total Spend',fC(pd.cost||0),'budget',true),kpiCard('CPV',fCpv(pd.cpv||0),'cost per view')].join('');
+  const audEl=document.getElementById(`${pid}-aud`);
+  if(audEl){const tI=ad.reduce((s,a)=>s+a.imp,0);if(ad.length>=2){audEl.innerHTML=ad.map(a=>audCard2(a,tI)).join('');mkGrouped(`${pid}-ca`,['Impressions','Video Views'],{label:ad[0].aud,data:[ad[0].imp,ad[0].views],backgroundColor:(AC[ad[0].aud]||'#888')+'BB',borderColor:AC[ad[0].aud]||'#888',borderWidth:1.5,borderRadius:5},{label:ad[1].aud,data:[ad[1].imp,ad[1].views],backgroundColor:(AC[ad[1].aud]||'#888')+'BB',borderColor:AC[ad[1].aud]||'#888',borderWidth:1.5,borderRadius:5});mkBar(`${pid}-cb`,ad.map(a=>a.aud),[{data:ad.map(a=>a.views>0?a.cost/a.views:0),backgroundColor:ad.map(a=>(AC[a.aud]||'#888')+'BB'),borderColor:ad.map(a=>AC[a.aud]||'#888'),borderWidth:1.5,borderRadius:5}],{yFmt:v=>`₪${v.toFixed(3)}`,tt:{callbacks:{label:c=>` ₪${c.raw.toFixed(3)}`}}});}else if(ad.length===1)audEl.innerHTML=audCard1(ad[0]);}
+  const tbl=document.getElementById(`${pid}-tbl`);
+  if(tbl&&dl.length)tbl.innerHTML=dailyTable(dl);
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function showTab(id,btn){
+  killCharts();
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(id==='ov'){renderOv();return;}
+  const t=PLATS.find(p=>p.id===id);
+  if(t)renderPlat(t.name,id);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+setSt('loading');
+LIVE=seedFromAUD(); renderOv();
+doRefresh();
+setInterval(doRefresh,5*60*1000);
+</script>
+</body>
+</html>
